@@ -1,0 +1,4 @@
+1679502799
+conaninfo.txt: 432c5119cc0ac440bcce660b7ad1e8a3
+include/project1.h: 89c463f6489f8d0c5f26a07a10656cf6
+lib/libproject1.a: d62561d29271b264afc56a01d39dbb8e
