@@ -1,4 +1,4 @@
-1680021166
+1680023663
 conaninfo.txt: b0a1d5ce2a09edaea933dd689a50e91e
 include/kth/infrastructure.hpp: 7de8326773ae457dbf7a27331475f32e
 include/kth/infrastructure/assumptions.hpp: 250f9dcd29b8a96128822f71a6ed8cdc
