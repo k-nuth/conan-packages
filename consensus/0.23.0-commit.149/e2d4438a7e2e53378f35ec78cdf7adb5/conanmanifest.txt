@@ -1,4 +1,4 @@
-1680016038
+1680016032
 conanfile.py: 738574654c4d97f2e2a48bf0772d0bd5
 export_source/CMakeLists.txt: 52953b4455002b4b1cecc6f4ba1f2fb3
 export_source/ci_utils/cmake/FindGMP.cmake: cf0f4ac934e37220b1841327e32cf960
@@ -8,7 +8,8 @@ export_source/ci_utils/cmake/knuthbuildinfo.cmake: 3f4b37f3a575b0d50459502d3df4c
 export_source/include/kth/consensus.hpp: 9e937030005bb53edaa8fb3c64ffb83a
 export_source/include/kth/consensus/define.hpp: 2485b02b2b68f939665ffe87d2a10a8b
 export_source/include/kth/consensus/export.hpp: 7355db6aa94bdb37d21f9919dc817eac
-export_source/include/kth/consensus/version.hpp: 85ec41991dda0ef5b33c6536bc3eea93
+export_source/include/kth/consensus/version.hpp: f25c0076a866f1fc6881b25b51a47f5f
+export_source/include/kth/consensus/version.hpp-e: 57707e325e3aa73fce9337d5359801cc
 export_source/src/bch-rules/amount.cpp: bf1e8ff6c449eca2df927bbdc9765ba3
 export_source/src/bch-rules/amount.h: 47260c1b63f8dff8aaec0b7a5c5682f9
 export_source/src/bch-rules/attributes.h: bfb1ccdcf8a4cb5a874675f308ebd56c
