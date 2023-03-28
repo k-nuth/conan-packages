@@ -1,4 +1,4 @@
-1680016024
+1680016026
 conanfile.py: 61adbc952b7b6f91e476665acfdac8eb
 export_source/CMakeLists.txt: 2a13e917eb9e056df536780a82ce2210
 export_source/ci_utils/cmake/FindGMP.cmake: cf0f4ac934e37220b1841327e32cf960
@@ -147,7 +147,7 @@ export_source/include/kth/infrastructure/utility/track.hpp: 873a5065bff2aa62503a
 export_source/include/kth/infrastructure/utility/tristate.hpp: 7640b7192c2b92ce69c48904ae544727
 export_source/include/kth/infrastructure/utility/work.hpp: 1fd3873eb52662dc42e31e2b6079df5b
 export_source/include/kth/infrastructure/utility/writer.hpp: 803824ccd90de7d3018e400db82ef1cb
-export_source/include/kth/infrastructure/version.hpp: e34c7f71b94441acfb511502bf9afae5
+export_source/include/kth/infrastructure/version.hpp: f3ec7ecd9074e683a527fd6fe55e83be
 export_source/include/kth/infrastructure/wallet/cashaddr.hpp: ab2ac789c2d516d4be0e2da30a6941ea
 export_source/include/kth/infrastructure/wallet/dictionary.hpp: 01c4704f6c0c3f1d0fc47643762294bb
 export_source/include/kth/infrastructure/wallet/hd_private.hpp: 062f79299c453319d539e3af4f4b44ac
