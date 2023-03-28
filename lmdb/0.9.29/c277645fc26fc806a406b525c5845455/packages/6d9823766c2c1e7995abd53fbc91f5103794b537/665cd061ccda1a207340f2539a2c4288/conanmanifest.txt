@@ -1,0 +1,9 @@
+1680010845
+bin/mdb_copy: c660923bbf365f78d603788ab47cb887
+bin/mdb_dump: a47488d542af353584b549b02a3c5a62
+bin/mdb_load: 8779872520f2406b499450c507dc7668
+bin/mdb_stat: 34eb28089db549c15d9eb96fa56d54e1
+conaninfo.txt: d576cb0a6975cd61655ac2975b4a923c
+include/lmdb.h: e4e5e6a0e0d3914b531a476af0808ed0
+lib/liblmdb.a: 34f7dd12c880aac379b8b43af74546ca
+licenses/LICENSE: 153d07ef052c4a37a8fac23bc6031972
