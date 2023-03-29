@@ -1,6 +1,0 @@
-1679834198
-conaninfo.txt: ab7f77b408643a545a9e1f1aa4804098
-include/zconf.h: 1714f5dbd2f8a357d5c0ac0a0778a3ad
-include/zlib.h: 4ec29824b6f28d25b2b9eb17cda0cf56
-lib/libz.a: 81a0b0500150e75ac5ab4614b8bf3625
-licenses/LICENSE: e44b82e2ed5718c27fd90032b0e098a9

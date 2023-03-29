@@ -1,6 +1,0 @@
-1679834203
-conaninfo.txt: ab7f77b408643a545a9e1f1aa4804098
-include/backtrace-supported.h: f94eea2034966a0f91474206cac9d1c0
-include/backtrace.h: cfce6a3e4eb1344e9e157e1417426c2d
-lib/libbacktrace.a: b0287872420acc1e97cde7e7d4dff00d
-licenses/LICENSE: 24b5b3feec63c4be0975e1fea5100440
