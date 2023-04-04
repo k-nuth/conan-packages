@@ -1,0 +1,6 @@
+1680648909
+conaninfo.txt: 24e78011e1f1ed777abb260198471dad
+include/zconf.h: 092e0d9f83abbb76b8e9c7345558ad4a
+include/zlib.h: 4ec29824b6f28d25b2b9eb17cda0cf56
+lib/libz.a: 566ea65d09b31826c352e6af269c4f33
+licenses/LICENSE: e44b82e2ed5718c27fd90032b0e098a9
