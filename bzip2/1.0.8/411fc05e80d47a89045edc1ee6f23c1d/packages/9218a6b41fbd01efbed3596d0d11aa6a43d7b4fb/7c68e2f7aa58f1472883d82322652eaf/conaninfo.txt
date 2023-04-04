@@ -1,0 +1,10 @@
+[settings]
+arch=x86_64
+build_type=Release
+compiler=apple-clang
+compiler.version=14
+os=Macos
+[options]
+build_executable=True
+fPIC=True
+shared=False
