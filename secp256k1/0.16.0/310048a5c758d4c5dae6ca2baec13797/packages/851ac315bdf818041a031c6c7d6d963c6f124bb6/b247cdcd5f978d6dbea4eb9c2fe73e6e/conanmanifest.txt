@@ -1,0 +1,12 @@
+1680707122
+conaninfo.txt: ddf9ec5893d9d6a6041b77aab3f3a6ae
+include/secp256k1.h: 5d14546a4298c7cdbf1af2af5f8574c1
+include/secp256k1/version.h: 43559d8ead1a3152f3ff08dd0fcd689a
+include/secp256k1_ecdh.h: f636594cbb5d3a0d19802929c7a6070f
+include/secp256k1_multiset.h: 9e22e9c61c484f42712914a37ca596ea
+include/secp256k1_preallocated.h: ad3395c5c6c2d2717d4ec132fc5aee3c
+include/secp256k1_recovery.h: 857a4a065e55561985017ef745ef1435
+include/secp256k1_schnorr.h: efa263b194b436b4cbecdf307e389252
+lib/cmake/secp256k1/secp256k1-config-release.cmake: 7f4f79368cd2e260fb8d096898e9249c
+lib/cmake/secp256k1/secp256k1-config.cmake: 78dbf2d767155a614b3511b7a755ea21
+lib/libsecp256k1.a: bb0d5475568df7ebf6414118e4408e2d
