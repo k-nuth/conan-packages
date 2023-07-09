@@ -1,0 +1,8 @@
+1688924747
+conaninfo.txt: e1fed7870a2e1dde6968af0f1250eb28
+include/gmp.h: 4e1125df1538bc83e25e2b2e0c3aaa84
+include/gmpxx.h: ea3d21de4bcf7c696799c5c55dd3655b
+lib/libgmp.a: f37471c8147c7f370d41aacd05c46bc3
+lib/libgmpxx.a: afa2c37f7ec1f343bde14a632dc396f7
+licenses/COPYING.LESSERv3: 6a6a8e020838b23406c81b19c1d46df6
+licenses/COPYINGv2: b234ee4d69f5fce4486a80fdaf4a4263
