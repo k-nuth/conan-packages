@@ -1,0 +1,9 @@
+1699272436
+conanfile.py: ec95cafe81bff9595f1800279ce19594
+export_source/CMakeLists.txt: 7d34a5dd37b8e72adcf73aa02b08e57b
+export_source/ci_utils/cmake/FindGMP.cmake: cf0f4ac934e37220b1841327e32cf960
+export_source/ci_utils/cmake/KnuthTools.cmake: 2d0d40e7ba5d314800f76fbbb4053deb
+export_source/ci_utils/cmake/NativeExecutable.cmake: b16d99cb63055ca5f8156ffa1ec58754
+export_source/ci_utils/cmake/knuthbuildinfo.cmake: 3f4b37f3a575b0d50459502d3df4c710
+export_source/src/main.cpp: 807818ea4d701423ad14f57f1cbd6d9e
+export_source/src/version.hpp: 14b8897cecaa45539bc766a00fab22b4
