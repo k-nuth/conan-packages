@@ -1,0 +1,5 @@
+1677791878
+conandata.yml: df4d17ea0eebc25f4a502edb2ef7db81
+conanfile.py: fb9548a943a4a5bd9c2b53d9f565eb8f
+export_source/patches/0001-pointer-arithmetic.patch: 363e006dbc57c0cdcbd9e5d907f5318e
+export_source/patches/0002-msvc-unistd-alternative.patch: 05e3bab9f3bd411c8a7b9aedb671a5cf
