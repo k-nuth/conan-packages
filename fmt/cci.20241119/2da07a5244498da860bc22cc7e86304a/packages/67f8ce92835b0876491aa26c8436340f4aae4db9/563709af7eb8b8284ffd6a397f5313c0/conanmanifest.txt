@@ -1,0 +1,18 @@
+1732476579
+conaninfo.txt: 8002e99a00dd5a771f73323e1d526eb4
+include/fmt/args.h: b7b8890137f0ca94cc8b7807036cb30f
+include/fmt/base.h: 5893b5e51c45afec22bdc47a147d59ff
+include/fmt/chrono.h: 5e20067316859410319ea4ed007e9b22
+include/fmt/color.h: b91c9697a84ca08a181e41c06a6ca36f
+include/fmt/compile.h: bdb2414ae5e8457b87ef7b19480e02b6
+include/fmt/core.h: c332419718513c270a50a91d8a7f95bf
+include/fmt/format-inl.h: 3afda4210d97b2252583b382e65db0fe
+include/fmt/format.h: 2c3e73b94290c8b8505469aecfed036b
+include/fmt/os.h: 38dd8b12f8fae1ecdfa02af68926d803
+include/fmt/ostream.h: a3c84148b667ee7c929b5bba340a4b4f
+include/fmt/printf.h: 612bda3685e47deb3f163aa0917ad0d3
+include/fmt/ranges.h: 70a448bd18b7c1f48a43342ea8e4afc4
+include/fmt/std.h: b3837ef3250746d02425e667b8bbeaa8
+include/fmt/xchar.h: 481dd0bd67a66648096464a63d8a02a4
+lib/libfmt.a: ab623ef2aef8c2d080f404cae129af89
+licenses/LICENSE: b9257785fc4f3803a4b71b76c1412729
