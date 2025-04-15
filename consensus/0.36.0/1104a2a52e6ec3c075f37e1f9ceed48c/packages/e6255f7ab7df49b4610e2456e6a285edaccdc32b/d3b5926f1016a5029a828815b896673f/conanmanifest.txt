@@ -1,0 +1,9 @@
+1744728122
+conaninfo.txt: f045bdf432992092144fe5ec11f72595
+include/kth/consensus.hpp: 0d927cc49a899fb7c67432a4a4cc1fab
+include/kth/consensus/define.hpp: 599240f28ed41b978a621dce121ec950
+include/kth/consensus/export.hpp: 48ab48bbd7364e92996918557e9d69e4
+include/kth/consensus/version.hpp: 9bfd092b83e0904ea0d76780bd6e6fed
+lib/cmake/consensus/consensus-config-release.cmake: bf108ef86e010467a419c6d071c32e41
+lib/cmake/consensus/consensus-config.cmake: c8bfeeaa774f786dc5ddd9b80b994920
+lib/libconsensus.a: 6db3c6985c672f3b73f1ebf280561fa7
