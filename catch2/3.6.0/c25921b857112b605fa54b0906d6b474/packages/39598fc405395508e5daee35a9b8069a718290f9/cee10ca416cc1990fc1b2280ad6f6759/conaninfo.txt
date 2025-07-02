@@ -1,0 +1,14 @@
+[settings]
+arch=armv8
+build_type=Release
+compiler=apple-clang
+compiler.cppstd=23
+compiler.libcxx=libc++
+compiler.version=15
+os=Macos
+[options]
+console_width=80
+fPIC=True
+no_posix_signals=False
+shared=False
+with_prefix=False
