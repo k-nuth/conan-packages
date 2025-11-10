@@ -1,0 +1,15 @@
+1762801967
+conaninfo.txt: 9e288ac884456fe56af5c4bb50584f43
+include/simdutf.h: 85ca3ca8baf9919e92aef61d6d616931
+include/simdutf/avx512.h: b51f02fa6f3f3e1b033dbbca51f8fa23
+include/simdutf/common_defs.h: c12c93aa4f1248b71655232068b5968f
+include/simdutf/compiler_check.h: ea8ed0a6fc3210be327fa3a05d6ee89a
+include/simdutf/encoding_types.h: aae68cc738355b2b5ef46c3932c020d8
+include/simdutf/error.h: 0ef2c6125f209485e1ebab57e17ba9fa
+include/simdutf/implementation.h: 660fcc2552973810cabed0dbfa21dfef
+include/simdutf/internal/isadetection.h: 8ecdb7da79e9a3a3c8f0234c10bdbeb9
+include/simdutf/portability.h: 1fd5e1d9ec4ed57bc8b2b157d3de2d58
+include/simdutf/simdutf_version.h: d0bed7c0626f8e8cfa0c005fa2198641
+lib/libsimdutf.a: 45f37adffc0f0ea7e6cfcea134c65c19
+licenses/LICENSE-APACHE: 9a830e3d94d23c95cf7280a8e5d04741
+licenses/LICENSE-MIT: 44b8879887e312bc332a205805fb41d1
