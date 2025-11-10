@@ -1,0 +1,8 @@
+1762774998
+conaninfo.txt: 6ddfef269e2c08e805f2ba4e98215aed
+include/gmp.h: ce1ba098c7adb0215dfa5d4259c06f89
+include/gmpxx.h: 70e8346fc2a0a87c6dd806a0e75f2dea
+lib/libgmp.a: 931a4ec0d746370013ac9cfd160d6548
+lib/libgmpxx.a: b342bc8b2841389d6d3870e73f6790cb
+licenses/COPYING.LESSERv3: 6a6a8e020838b23406c81b19c1d46df6
+licenses/COPYINGv2: b234ee4d69f5fce4486a80fdaf4a4263
