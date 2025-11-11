@@ -1,0 +1,13 @@
+[settings]
+arch=wasm
+build_type=Release
+compiler=clang
+compiler.version=14
+os=Emscripten
+[options]
+aes_block_size=aes128
+cbc=True
+ctr=True
+ecb=True
+fPIC=True
+shared=False
