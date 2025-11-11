@@ -1,0 +1,10 @@
+[settings]
+arch=wasm
+build_type=Release
+compiler=clang
+compiler.version=14
+os=Emscripten
+[options]
+enable_robust_mutex=False
+fPIC=True
+shared=False
