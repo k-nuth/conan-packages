@@ -1,0 +1,6 @@
+1762870250
+conaninfo.txt: 1ada7bb09f48364d543f42525e4f9bb5
+include/zconf.h: 3b272320b99d236d59e3696d70c22107
+include/zlib.h: fbab4a455b2970c36a44c9464c9625e4
+lib/libz.a: 3ca5b1576f0d80ce8a7a59ad63bc077e
+licenses/LICENSE: a0ee6efb064fd8a9b73d811535c2a55f
