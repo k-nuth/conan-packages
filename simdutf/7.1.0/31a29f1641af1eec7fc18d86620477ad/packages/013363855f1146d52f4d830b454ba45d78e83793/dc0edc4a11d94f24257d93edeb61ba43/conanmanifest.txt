@@ -1,4 +1,4 @@
-1763768363
+1763768448
 conaninfo.txt: f76c3f3fa7b796da3093074c27e433f9
 include/simdutf.h: 85ca3ca8baf9919e92aef61d6d616931
 include/simdutf/avx512.h: b51f02fa6f3f3e1b033dbbca51f8fa23
