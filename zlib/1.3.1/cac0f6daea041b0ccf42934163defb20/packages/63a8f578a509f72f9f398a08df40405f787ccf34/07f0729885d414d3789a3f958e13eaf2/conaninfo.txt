@@ -1,0 +1,9 @@
+[settings]
+arch=wasm
+build_type=Release
+compiler=clang
+compiler.version=14
+os=Emscripten
+[options]
+fPIC=True
+shared=False
