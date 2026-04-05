@@ -1,0 +1,8 @@
+1775416175
+conaninfo.txt: 0057bac8d2cfff353e5585abef7c4ab1
+include/gmp.h: 8cc2657439b5f861db3ba1f3da0a7e41
+include/gmpxx.h: 70e8346fc2a0a87c6dd806a0e75f2dea
+lib/libgmp.a: 74dd178221d2935e762b7ccef23fce3b
+lib/libgmpxx.a: 479f8a0188ed4fc64d9a8387d2085a8d
+licenses/COPYING.LESSERv3: 6a6a8e020838b23406c81b19c1d46df6
+licenses/COPYINGv2: b234ee4d69f5fce4486a80fdaf4a4263

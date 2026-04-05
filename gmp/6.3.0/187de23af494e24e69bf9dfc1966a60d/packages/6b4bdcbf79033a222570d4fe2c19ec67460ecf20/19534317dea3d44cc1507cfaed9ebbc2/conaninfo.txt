@@ -1,0 +1,13 @@
+[settings]
+arch=wasm
+build_type=Release
+compiler=emcc
+compiler.cppstd=23
+compiler.libcxx=libc++
+compiler.version=5.0.3
+os=Emscripten
+[options]
+disable_assembly=True
+enable_cxx=True
+fPIC=True
+shared=False
