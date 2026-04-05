@@ -1,0 +1,6 @@
+1775416234
+conaninfo.txt: 9d26a6f65b9e74d5afb86fdea836ad49
+include/zconf.h: ac5c4c4663ba5c20936b69b3beb53a72
+include/zlib.h: fbab4a455b2970c36a44c9464c9625e4
+lib/libz.a: e19db0a7f77a29bc74ba2e1b5056ee25
+licenses/LICENSE: a0ee6efb064fd8a9b73d811535c2a55f
