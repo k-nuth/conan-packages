@@ -1,0 +1,7 @@
+1782512493
+bin/bzip2: b32d4c12cb03bf90b79b0353d374db9b
+conaninfo.txt: 82f5c52e79761f50deeb62d7ecb96a5e
+include/bzlib.h: 62ae65ddbab1cbbc479e958bd404bea0
+lib/cmake/conan-official-bzip2-variables.cmake: a69a4a2972ac4c839f3b871834c486a9
+lib/libbz2.a: 06d89c330958dda525e63a8fff9140d4
+licenses/LICENSE: 1e5cffe65fc786f83a11a4b225495c0b
