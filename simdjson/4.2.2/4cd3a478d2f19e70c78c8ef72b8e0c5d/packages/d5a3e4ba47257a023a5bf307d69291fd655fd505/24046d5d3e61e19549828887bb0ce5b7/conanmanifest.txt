@@ -1,0 +1,5 @@
+1782512409
+conaninfo.txt: 9647d7d97f95e82f53d2cb4e128ac82e
+include/simdjson.h: 29d05459771a811804036910a23e2448
+lib/libsimdjson.a: e48a07f6b2fb9c487621b433314369c7
+licenses/LICENSE: 08ad3d5aa0308e4e47849861fbb9da7b
