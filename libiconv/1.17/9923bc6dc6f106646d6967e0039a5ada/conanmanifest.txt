@@ -1,0 +1,4 @@
+1774021600
+conandata.yml: 9ad7c511b51bbb65d67bdff96a8ad015
+conanfile.py: f254d25087b790f1537a53f3af4e2c84
+export_source/patches/1.17-001-fix-error-function-declaration-without-prototype.patch: f8a474e77d7f733478114dd7b3d0b647
