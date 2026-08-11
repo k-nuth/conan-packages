@@ -1,0 +1,16 @@
+1786459419
+conaninfo.txt: 9a0c8ddebd961c66ec7c3cb6844c5954
+include/utxoz/aliases.hpp: 1b6c52faf303b7de71083d81bdb47dc4
+include/utxoz/config.hpp: c3b07585f910c76f132578c0022275f8
+include/utxoz/database.hpp: a99d4f4e26b93582af7040d374a0afac
+include/utxoz/literals.hpp: 6dac55f90de0be0a8c47e96577e40a32
+include/utxoz/logging.hpp: fa315a22c76839055da2072bf9f3b3eb
+include/utxoz/statistics.hpp: e540b5993bb6dacb5116a8e05c30b07f
+include/utxoz/types.hpp: f1691e96c18084b7c0ae3bbac676c999
+include/utxoz/utils.hpp: b8ecdc389c5ba24d0c6aae3fe55403ad
+include/utxoz/utxoz.hpp: 652ddba711baca470176d69bd5507460
+include/utxoz/version.hpp: 03a7534e3bf07edba56dc8fc9822b6c6
+lib/cmake/utxoz/utxoz-targets-release.cmake: 069f79f17f730a461f8cc0d4cb3a526d
+lib/cmake/utxoz/utxoz-targets.cmake: 3334ff130ca9958eb3da3a84622a6f6f
+lib/utxoz.lib: e9cf524ebb3fbe3e99ea0e4af5d951f1
+licenses/LICENSE: b1e4959f2e0d8e4dec2bd83060ed59bf
