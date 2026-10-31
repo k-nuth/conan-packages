@@ -1,0 +1,10 @@
+[settings]
+arch=wasm
+build_type=Release
+compiler=emcc
+compiler.version=6.0.13
+os=Emscripten
+[options]
+fPIC=True
+no_fips=False
+shared=False
