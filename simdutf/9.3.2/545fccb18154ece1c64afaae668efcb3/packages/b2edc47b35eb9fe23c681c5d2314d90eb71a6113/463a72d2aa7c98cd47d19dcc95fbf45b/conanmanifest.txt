@@ -1,4 +1,4 @@
-1793444684
+1793444732
 conaninfo.txt: ae3084d4386954dbc759ceab0a7c7900
 include/simdutf.h: 85ca3ca8baf9919e92aef61d6d616931
 include/simdutf/avx512.h: b51f02fa6f3f3e1b033dbbca51f8fa23
