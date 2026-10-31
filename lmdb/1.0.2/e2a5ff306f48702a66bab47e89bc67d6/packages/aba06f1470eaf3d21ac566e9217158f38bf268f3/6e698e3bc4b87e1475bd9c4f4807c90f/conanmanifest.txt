@@ -1,0 +1,10 @@
+1793444808
+bin/mdb_copy.js: bbcc083862a978e1c79edc4e88663155
+bin/mdb_drop.js: 498b52a305bb90f8b622847c1fd7e359
+bin/mdb_dump.js: 4e1d64a50c9a6adc714495b7a801708a
+bin/mdb_load.js: 3f72dba9b0a196589100e909c0ff8ff2
+bin/mdb_stat.js: 2fc0fbee11c873c66f4ad76adbb78a05
+conaninfo.txt: 4bbb1f24df2fe8041feba561d7e4d6f7
+include/lmdb.h: 3856bf08f884be41cc8ec45863dc56f8
+lib/liblmdb.a: 586496dc457c9271ca5e909981893784
+licenses/LICENSE: 153d07ef052c4a37a8fac23bc6031972
