@@ -1,0 +1,20 @@
+1794482904
+bin/utxoz_census: 2004f8e611b54ddc937974ace678e873
+bin/utxoz_verify_unique: a994f3f3a9fa1237ade90a04ecc1d6bd
+conaninfo.txt: 3178d0ee18030127cc6a540447f8c7be
+include/utxoz/aliases.hpp: 1b6c52faf303b7de71083d81bdb47dc4
+include/utxoz/census.hpp: 4339cd1c511902df9aed61888a1b26c9
+include/utxoz/config.hpp: 3fbc74daed5dc307aa20454526780b1c
+include/utxoz/database.hpp: 5319ed3d59ac954becf6e355e164d34d
+include/utxoz/literals.hpp: 6dac55f90de0be0a8c47e96577e40a32
+include/utxoz/logging.hpp: fa315a22c76839055da2072bf9f3b3eb
+include/utxoz/statistics.hpp: ce53e7a65c77e53e3d05c7bbdfae8423
+include/utxoz/types.hpp: 8768e2d56a0ec0d7af94affd4690aa08
+include/utxoz/uniqueness.hpp: c6fecf9e8415fd46607855709b1214bf
+include/utxoz/utils.hpp: b8ecdc389c5ba24d0c6aae3fe55403ad
+include/utxoz/utxoz.hpp: 3b8ee59ecb8caa0aefb5c1daefe1d8bf
+include/utxoz/version.hpp: 055aafa37d53e8bb92828bd4731f14e9
+lib/cmake/utxoz/utxoz-targets-release.cmake: 719c9f0a1a780e501d147c8a63092302
+lib/cmake/utxoz/utxoz-targets.cmake: 9b114001dea6e0899ceec2cdb3544ae4
+lib/libutxoz.a: 8f0ff8792a6c0fd51b34439965adbb37
+licenses/LICENSE: b1e4959f2e0d8e4dec2bd83060ed59bf
