@@ -1,0 +1,666 @@
+# Copyright (c) 2016-present Knuth Project developers.
+# Distributed under the MIT software license, see the accompanying
+# file COPYING or http://www.opensource.org/licenses/mit-license.php.
+
+import os
+from datetime import datetime, timezone
+from conan import ConanFile
+from conan.errors import ConanInvalidConfiguration
+from conan.tools.build.cppstd import check_min_cppstd
+from conan.tools.cmake import CMake, CMakeDeps, CMakeToolchain, cmake_layout
+from conan.tools.files import copy
+from kthbuild import KnuthConanFileV2, option_on_off
+from conan.tools.files import collect_libs
+
+
+# =============================================================================
+# Block capacity calculation for static array allocation
+# =============================================================================
+
+# Bitcoin genesis block: 2009-01-03 18:15:05 UTC (block 0)
+_GENESIS_TIMESTAMP = datetime(2009, 1, 3, 18, 15, 5, tzinfo=timezone.utc)
+_SECONDS_PER_BLOCK = 600  # 1 block every 10 minutes
+_BLOCK_ALIGNMENT = 65536  # 2^16, for nice alignment
+_BASE_PERIOD_YEAR = 2030
+_PERIOD_LENGTH_YEARS = 5
+
+# Pinned to the reviewed ConanCenter recipe revision of capnproto 1.5.0. The same
+# reference is used for the host library and the build-context schema compiler.
+CAPNPROTO_REF = "capnproto/1.5.0#50b2e14c58a3840a4eed6ac9d887e622"
+
+
+def _get_target_year(compile_year: int) -> int:
+    """Calculate target year based on compilation year (5-year periods)."""
+    if compile_year < _BASE_PERIOD_YEAR:
+        return _BASE_PERIOD_YEAR
+    periods_since_base = (compile_year - _BASE_PERIOD_YEAR) // _PERIOD_LENGTH_YEARS
+    return _BASE_PERIOD_YEAR + (periods_since_base + 1) * _PERIOD_LENGTH_YEARS
+
+
+def _calculate_header_capacity(compile_year: int, currency: str = "BCH") -> int:
+    """Calculate header index capacity aligned to 2^16 for a given compilation year."""
+    target_year = _get_target_year(compile_year)
+    target_date = datetime(target_year, 12, 31, 23, 59, 59, tzinfo=timezone.utc)
+    if currency != "BCH":
+        seconds_since_genesis = (target_date - _GENESIS_TIMESTAMP).total_seconds()
+        blocks_exact = seconds_since_genesis / _SECONDS_PER_BLOCK
+        return ((int(blocks_exact) + _BLOCK_ALIGNMENT - 1) // _BLOCK_ALIGNMENT) * _BLOCK_ALIGNMENT
+
+    # Plan for the earliest supported one-minute chain, tempnet. The index
+    # retains its 600-second history, then grows ten times faster from Oct 15.
+    # This is an allocation estimate, not a consensus activation-height rule.
+    faster_blocks = datetime(2026, 10, 15, 12, tzinfo=timezone.utc)
+    historical_seconds = int((min(target_date, faster_blocks) - _GENESIS_TIMESTAMP).total_seconds())
+    faster_seconds = max(0, int((target_date - faster_blocks).total_seconds()))
+    # Express both portions over the legacy 600-second denominator and round
+    # up, so neither the partial final block nor the alignment loses capacity.
+    weighted_seconds = historical_seconds + faster_seconds * (_SECONDS_PER_BLOCK // 60)
+    blocks = (weighted_seconds + _SECONDS_PER_BLOCK - 1) // _SECONDS_PER_BLOCK
+    return ((blocks + _BLOCK_ALIGNMENT - 1) // _BLOCK_ALIGNMENT) * _BLOCK_ALIGNMENT
+
+required_conan_version = ">=2.0"
+
+class KthRecipe(KnuthConanFileV2):
+    # version is set dynamically via --version parameter
+    name = "kth"
+    license = "https://opensource.org/licenses/MIT"
+    url = "https://github.com/k-nuth/kth-mono"
+    description = "Bitcoin Cross-Platform C++ Development Toolkit"
+    settings = "os", "compiler", "build_type", "arch"
+
+    options = {
+        "shared": [True, False],
+        "fPIC": [True, False],
+        "tests": [True, False],
+        "console": [True, False],
+        "march_id": ["ANY"],
+        "march_strategy": ["download_if_possible", "optimized", "download_or_fail"],
+        "currency": ['BCH', 'BTC', 'LTC'],
+        "mempool_backend": ['cfm', 'parlay'],
+        # Signature verification in block validation: libsecp256k1 inline, one
+        # signature at a time (default), or deferred checks verified in
+        # lane-parallel batches by src/secp256k1-turbo (AVX-512 IFMA where the
+        # CPU has it, libsecp256k1 elsewhere).
+        "signature_verification": ['secp256k1', 'secp256k1_turbo'],
+        "verbose": [True, False],
+        "consensus": [True, False],
+        "db": ['dynamic'],
+        "db_readonly": [True, False],
+        "cxxflags": ["ANY"],
+        "cflags": ["ANY"],
+        "cmake_export_compile_commands": [True, False],
+        "with_examples": [True, False],
+        "with_icu": [True, False],
+        "with_png": [True, False],
+        "with_qrencode": [True, False],
+        "with_jemalloc": [True, False],
+        "with_stats": [True, False],
+        "rpc": ["jsonrpc", "grpc", "capnproto", "none"],
+        "wasm_simd": [True, False],
+        "with_websocket": [True, False],
+        "embed_utxo_bloom": [True, False],
+        "utxoz_reference": [True, False],
+        "asio_standalone": [True, False],
+        # Experimental: a Worker-owned WebSocket transport for the browser
+        # (Emscripten only). See experiments/browser-worker.
+        "browser_node": [True, False],
+
+        # secp256k1 assembly selection (modern SECP256K1_ASM). "off" is used by
+        # the ASan CI build, whose field_5x52 asm otherwise exhausts registers.
+        "secp256k1_asm": ["auto", "off"],
+    }
+
+
+    default_options = {
+        "shared": False,
+        "fPIC": True,
+        "tests": True,
+        "console": False,
+        "march_strategy": "download_if_possible",
+        "currency": "BCH",
+        "mempool_backend": "cfm",
+        "signature_verification": "secp256k1",
+        "verbose": False,
+        "consensus": False,
+        "db": "dynamic",
+        "db_readonly": False,
+        "cmake_export_compile_commands": False,
+
+        "with_examples": False,
+        "with_icu": False,
+        "with_png": False,
+        "with_qrencode": False,
+        # WARNING: jemalloc causes crashes with LMDB (mdb_env_close/mdb_dbi_close segfaults).
+        # LMDB uses mmap extensively which conflicts with jemalloc's memory management.
+        # Potential solutions if jemalloc is needed:
+        #   1. Run with MALLOC_CONF="retain:true" (less aggressive munmap)
+        #   2. Use MDB_WRITEMAP flag in LMDB (writes directly to mmap, bypasses malloc)
+        #   3. Compile LMDB separately without jemalloc linkage
+        # For now, keep disabled until a proper solution is implemented.
+        "with_jemalloc": False,
+        "with_stats": False,
+        "rpc": "jsonrpc",
+        "wasm_simd": True,
+        "with_websocket": False,
+        "embed_utxo_bloom": False,
+        "utxoz_reference": False,
+        "asio_standalone": True,
+        "browser_node": False,
+        "secp256k1_asm": "auto",
+    }
+
+    # `data/utxo_bloom.dat` (~68 MB) lives under `data/` but is intentionally
+    # NOT included in the recipe export: the Conan remote caps source
+    # uploads below that size, and the bloom is build-data, not source.
+    # The bloom is consumed from `${CMAKE_SOURCE_DIR}/data/utxo_bloom.dat`
+    # when present (CI / git-checkout builds embed it); source-tarball
+    # rebuilds gracefully fall back to no-embed (slower IBD, still correct).
+    exports_sources = "src/*", "include/*", "CMakeLists.txt", "cmake/*", "ci_utils/cmake/*", "third_party/*", "scripts/test_header_capacity.py", "scripts/check_parser_currencies.py", "scripts/check_tick_accessor_currencies.py", "scripts/check_template_cancellation.py", "conanfile.py"
+
+
+    @property
+    def is_shared(self):
+        # if self.settings.compiler == "Visual Studio" and self.msvc_mt_build:
+        #     return False
+        # else:
+        #     return self.options.shared
+        return self.options.shared
+
+    def validate(self):
+        KnuthConanFileV2.validate(self)
+        if self.options.browser_node and (self.settings.os != "Emscripten" or not self.options.asio_standalone):
+            raise ConanInvalidConfiguration("browser_node requires Emscripten and standalone Asio")
+        if self.info.settings.compiler.cppstd:
+            check_min_cppstd(self, "23")
+
+    def requirements(self):
+        if self.options.with_websocket and self.settings.os != "Emscripten":
+            self.requires("wslay/1.1.1", transitive_headers=True, transitive_libs=True)
+        self.requires("boost/1.91.0", transitive_headers=True, transitive_libs=True)
+        self.requires("cli11/2.7.2", transitive_headers=True)
+        self.requires("fmt/12.1.0", transitive_headers=True, transitive_libs=True)
+        self.requires("spdlog/1.17.0", transitive_headers=True, transitive_libs=True)
+        self.requires("lmdb/1.0.2", transitive_headers=True, transitive_libs=True)
+        self.requires("utxoz/1.1.0", transitive_headers=True, transitive_libs=True)
+
+        # GMP is required for BigInt support in the native interpreter.
+        self.requires("gmp/6.3.0", transitive_headers=True, transitive_libs=True)
+
+        if self.options.consensus:
+            self.requires("openssl/4.1.0", transitive_headers=True, transitive_libs=True)
+
+        self.requires("ctre/3.11.0", transitive_headers=True, transitive_libs=True)
+        self.requires("tiny-aes-c/1.0.0", transitive_headers=True, transitive_libs=True)
+
+        # ftxui drives the node-exe TUI dashboard, which doesn't build under
+        # Emscripten (see src/CMakeLists.txt). Skip the dep there so Conan
+        # doesn't complain that no component uses it.
+        if self.settings.os != "Emscripten":
+            self.requires("ftxui/7.0.3", transitive_headers=True, transitive_libs=True)
+
+        # Native Base64 acceleration; WebAssembly uses the in-tree SIMD128/scalar kernels.
+        if self.settings.os != "Emscripten":
+            self.requires("simdutf/9.3.2", transitive_headers=True, transitive_libs=True)
+
+        # simdjson for fast JSON parsing (not available for WebAssembly)
+        # TODO(2026-02-02): Check if simdjson adds WASM support in future versions
+        # The browser transport's network component uses it too.
+        if self.settings.os != "Emscripten" or self.options.browser_node:
+            self.requires("simdjson/5.0.5", transitive_headers=True, transitive_libs=True)
+
+        # llhttp (Node.js HTTP parser) backs the optional JSON-RPC server. It is a
+        # sans-io codec driven by the node's existing standalone-asio I/O loop, so
+        # it is only pulled in when the RPC server is compiled (and never for WASM).
+        if self.options.rpc == "jsonrpc" and self.settings.os != "Emscripten":
+            self.requires("llhttp/9.3.0", transitive_headers=True, transitive_libs=True)
+
+        # gRPC + Protobuf back rpc=grpc (docs/grpc.md). asio-grpc is the header-only
+        # bridge that lets gRPC completion queues drive the node's standalone-asio
+        # coroutines; nothing here is pulled in by the other backends. Pinned to
+        # reviewed recipe revisions.
+        if self._with_grpc:
+            self.requires("grpc/1.84.0#c7c2ff9ed88b66eac8b8399c96d8df2c",
+                          transitive_headers=True, transitive_libs=True)
+            self.requires("protobuf/6.33.5#ca5ff466767b31a1b496ec60247e105c",
+                          transitive_headers=True, transitive_libs=True)
+            self.requires("asio-grpc/3.7.0#32772dbeaa3c196a84f9a4ef9bc9cddc",
+                          transitive_headers=True, transitive_libs=True)
+
+        # Cap'n Proto serialization + RPC (KJ runtime) backs rpc=capnproto. The KJ
+        # event loop runs on one owned transport thread, see docs/capnproto-rpc.md.
+        # TLS and gzip are not used, which also keeps capnproto's openssl range
+        # (<4) out of a graph that pins openssl 4.x.
+        if self.options.rpc == "capnproto":
+            self.requires(CAPNPROTO_REF, transitive_headers=True, transitive_libs=True,
+                          options={"with_openssl": False, "with_zlib": False})
+
+        if self.options.with_png:
+            self.requires("libpng/1.6.59", transitive_headers=True, transitive_libs=True)
+
+        if self.options.with_qrencode:
+            self.requires("libqrencode/4.1.1", transitive_headers=True, transitive_libs=True)
+
+        if self.options.with_jemalloc:
+            # https://jasone.github.io/2025/06/12/jemalloc-postmortem/
+            self.requires("jemalloc/5.4.0", transitive_headers=True, transitive_libs=True)
+
+        if self.options.asio_standalone:
+            # Knuth fork of standalone Asio with independent heterogeneous channel
+            # selection (select_channel / make_select / make_selector). Pinned to the
+            # reviewed recipe revision; see docs/asio-select-sync.md. The target stays
+            # asio::asio and ASIO_VERSION stays 103802.
+            # asio-grpc asks for asio/[>=1.17 <2], which never matches a -kth
+            # pre-release; force=True makes the fork win that range as well.
+            self.requires("asio/1.38.3-kth.3#2d7621a6648b50ebe07f9b0d46ac0918",
+                          transitive_headers=True, transitive_libs=True,
+                          force=self._with_grpc)
+
+
+    @property
+    def _with_grpc(self):
+        return self.options.rpc == "grpc" and self.settings.os != "Emscripten"
+
+    def build_requirements(self):
+        if self._with_grpc:
+            # protoc and grpc_cpp_plugin run at build time, so they must come
+            # from the build context (this is what makes cross-builds work).
+            self.tool_requires("protobuf/<host_version>")
+            self.tool_requires("grpc/<host_version>")
+        # The schema compiler (capnp, capnpc-c++) must run on the build machine,
+        # also when cross compiling; the host package only supplies libraries.
+        if self.options.rpc == "capnproto":
+            self.tool_requires(CAPNPROTO_REF, options={"with_openssl": False, "with_zlib": False})
+        if self.options.tests:
+            self.test_requires("catch2/3.16.1")
+            self.test_requires("nanobench/4.3.11")
+
+    def config_options(self):
+        KnuthConanFileV2.config_options(self)
+
+        if self.settings.os != "Emscripten":
+            self.options.rm_safe("wasm_simd")
+
+        # Disable tests for WebAssembly (Catch2 incompatible with shared-memory/threads)
+        # and force the JSON-RPC server off: it relies on the standalone-asio I/O
+        # loop and llhttp, neither of which is built for Emscripten.
+        if self.settings.os == "Emscripten":
+            self.options.tests = False
+            self.options.rpc = "none"
+            self.options.with_websocket = False
+            self.output.info("Tests and RPC disabled for Emscripten build")
+
+    def configure(self):
+        # No RPC backend is built for WebAssembly, whatever was asked: here as well
+        # as in config_options(), because the caller's options are applied between
+        # the two and would otherwise bring one back (and split the package id).
+        if self.settings.os == "Emscripten":
+            self.options.rpc = "none"
+
+        # Reserve the backend names without silently building a node that cannot
+        # serve the selected protocol. Check before resolving any dependencies.
+        if self.options.rpc == "grpc" and self.options.consensus and self.settings.os != "Emscripten":
+            # grpc/1.84.0 requires openssl <4 and does not compile against the
+            # openssl/4.1.0 that consensus pins (X509_CRL_get_issuer now returns a
+            # const pointer). Neither pin is changed to hide that.
+            raise ConanInvalidConfiguration(
+                "rpc=grpc cannot be combined with consensus=True yet: grpc requires "
+                "openssl <4 while consensus pins openssl/4.1.0. Use consensus=False or "
+                "another rpc backend."
+            )
+        KnuthConanFileV2.configure(self)
+
+        self.options["fmt/*"].header_only = True
+        if self.options.browser_node:
+            # A Worker has no threads (ASIO_DISABLE_THREADS).
+            self.options["simdjson/*"].threads = False
+        # log os
+        self.output.info("Compiling for OS: %s" % (self.settings.os,))
+        if self.settings.os == "Emscripten":
+            self.options["boost/*"].header_only = True
+
+        # boost 1.91 added a cobalt_io_ssl sub-library, but the CCI recipe
+        # lists it as expected-to-be-built without producing it, so
+        # package_info() raises. Disable the whole cobalt module — kth
+        # doesn't use it. (CI profiles set the same option for the
+        # standalone deps-build path where this conanfile isn't the
+        # consumer.)
+        self.options["boost/*"].without_cobalt = True
+
+        self.options["spdlog/*"].header_only = True
+
+        if self._with_grpc:
+            # asio-grpc drives the node's standalone asio (not boost.asio).
+            self.options["asio-grpc/*"].backend = "asio"
+            # Only the C++ plugin is used; skip building the other languages.
+            for plugin in ("csharp", "node", "objective_c", "php", "python", "ruby"):
+                setattr(self.options["grpc/*"], plugin + "_plugin", False)
+            self.options["grpc/*"].csharp_ext = False
+
+        self.options["utxoz/*"].log = "spdlog"
+
+        self.options["*"].db_readonly = self.options.db_readonly
+        self.output.info("Compiling with read-only DB: %s" % (self.options.db_readonly,))
+
+    def package_id(self):
+        KnuthConanFileV2.package_id(self)
+
+        self.info.options.console = "ANY"
+        # self.info.options.no_compilation = "ANY"
+
+    def layout(self):
+        cmake_layout(self)
+
+    def generate(self):
+        tc = self.cmake_toolchain_basis()
+        tc.variables["CMAKE_VERBOSE_MAKEFILE"] = "ON"
+
+        tc.variables["GLOBAL_BUILD"] = "ON"
+        tc.variables["ENABLE_SHARED"] = option_on_off(self.is_shared)
+        tc.variables["ENABLE_SHARED_CAPI"] = option_on_off(self.is_shared)
+        tc.variables["ENABLE_POSITION_INDEPENDENT_CODE"] = option_on_off(self.options.fPIC)
+
+        tc.variables["WITH_CONSOLE"] = option_on_off(self.options.console)
+        tc.variables["WITH_CONSOLE_CAPI"] = option_on_off(self.options.console)
+
+        tc.variables["WITH_CONSENSUS"] = option_on_off(self.options.consensus)
+        tc.variables["DB_READONLY_MODE"] = option_on_off(self.options.db_readonly)
+        tc.variables["CONAN_DISABLE_CHECK_COMPILER"] = option_on_off(True)
+        
+        tc.variables["WITH_EXAMPLES"] = option_on_off(self.options.with_examples)
+        tc.variables["WITH_ICU"] = option_on_off(self.options.with_icu)
+        tc.variables["KTH_WITH_PNG"] = option_on_off(self.options.with_png)
+        tc.variables["KTH_WITH_QRENCODE"] = option_on_off(self.options.with_qrencode)
+        tc.variables["KTH_WITH_JEMALLOC"] = option_on_off(self.options.with_jemalloc)
+        tc.variables["KTH_WITH_STATS"] = option_on_off(self.options.with_stats)
+        tc.variables["KTH_RPC_BACKEND"] = str(self.options.rpc)
+        if self.settings.os == "Emscripten":
+            tc.variables["KTH_WASM_SIMD"] = option_on_off(self.options.wasm_simd)
+        tc.variables["KTH_WITH_WEBSOCKET"] = option_on_off(self.options.with_websocket)
+        tc.variables["KTH_EMBED_UTXO_BLOOM"] = option_on_off(self.options.embed_utxo_bloom)
+        tc.variables["KTH_UTXOZ_REFERENCE_MODE"] = option_on_off(self.options.utxoz_reference)
+        tc.variables["KTH_ASIO_STANDALONE"] = option_on_off(self.options.asio_standalone)
+        tc.variables["KTH_BROWSER_NODE"] = option_on_off(self.options.browser_node)
+
+        # secp256k1 is vendored (bitcoin-core/secp256k1) and configured directly
+        # in src/CMakeLists.txt; the modern build self-generates its precomputed
+        # tables, so only the assembly selection is exposed here.
+        tc.variables["SECP256K1_ASM"] = "OFF" if self.options.secp256k1_asm == "off" else "AUTO"
+        tc.variables["ENABLE_TEST"] = option_on_off(self.options.tests)
+
+        tc.variables["CURRENCY"] = self.options.currency
+        tc.variables["KTH_MEMPOOL_BACKEND"] = self.options.mempool_backend
+        tc.variables["KTH_SIGNATURE_VERIFICATION"] = self.options.signature_verification
+
+        # Header index capacity based on compilation year
+        header_capacity = _calculate_header_capacity(datetime.now().year, str(self.options.currency))
+        tc.variables["KTH_HEADER_INDEX_CAPACITY"] = header_capacity
+        self.output.info(f"Header index capacity: {header_capacity:,} headers")
+
+        # Pass version to CMake for C++ code generation
+        kth_version = str(self.version) if self.version else "0.0.0-dev"
+        tc.variables["KTH_VERSION"] = kth_version
+        self.output.info(f"Knuth Node version: {kth_version}")
+
+        tc.generate()
+        
+        deps = CMakeDeps(self)
+        deps.generate()
+
+    def build(self):
+        cmake = CMake(self)
+        cmake.configure()
+        if not self.options.cmake_export_compile_commands:
+            cmake.build()
+            # Note: tests are not run automatically during build
+            # Use 'cmake.test()' separately or run tests via ctest/script
+
+    def package(self):
+        cmake = CMake(self)
+        cmake.install()
+
+    def package_info(self):
+        # Set the main CMake file name
+        self.cpp_info.set_property("cmake_file_name", "kth")
+
+        # Define currency macro based on option
+        currency_define = f"KTH_CURRENCY_{self.options.currency}"
+
+        # Define mempool-backend macro based on option (cfm | parlay)
+        mempool_backend_define = f"KTH_MEMPOOL_BACKEND_{str(self.options.mempool_backend).upper()}"
+        sigverify_turbo = str(self.options.signature_verification) == "secp256k1_turbo"
+        sigverify_defines = ["KTH_SIGVERIFY_TURBO_BATCH"] if sigverify_turbo else []
+
+        # KTH_WITH_RPC describes the JSON-RPC implementation only; each backend has its
+        # own macro, so two never share a guard. Neither for
+        # WebAssembly: configure() selects none there.
+        rpc_defines = []
+        if self.options.rpc == "jsonrpc":
+            rpc_defines = ["KTH_WITH_RPC"]
+        elif self.options.rpc == "grpc":
+            rpc_defines = ["KTH_WITH_GRPC"]
+            # The gRPC public headers pull in infrastructure's asio wrapper, which
+            # selects standalone asio by macro; a consumer must see the same macros
+            # the library was built with or it gets Boost.Asio types (found by the
+            # installed-header consumer test).
+            if self.options.asio_standalone:
+                rpc_defines += ["KTH_ASIO_STANDALONE", "ASIO_STANDALONE"]
+        elif self.options.rpc == "capnproto":
+            rpc_defines = ["KTH_WITH_CAPNPROTO_RPC", "KTH_ASIO_STANDALONE", "ASIO_STANDALONE"]
+
+        # Define STATIC macros when building static libraries
+        static_defines = []
+        if not self.is_shared:
+            # Always include infrastructure and domain
+            static_defines = ["KI_STATIC", "KD_STATIC"]
+
+            # Add consensus if enabled
+            if self.options.consensus:
+                static_defines.append("KC_STATIC")
+
+            # Always include database and blockchain
+            static_defines.extend(["KDB_STATIC", "KB_STATIC"])
+
+            # Add network if not Emscripten, or for the browser transport
+            if self.settings.os != "Emscripten" or self.options.browser_node:
+                static_defines.append("KN_STATIC")
+
+            # Always include node
+            static_defines.append("KND_STATIC")
+
+        # Define individual components as separate targets
+        # Each component will be available as kth::component_name
+
+        # Secp256k1 cryptographic library
+        self.cpp_info.components["secp256k1"].libs = ["secp256k1"]
+        self.cpp_info.components["secp256k1"].names["cmake_find_package"] = "secp256k1"
+        self.cpp_info.components["secp256k1"].names["cmake_find_package_multi"] = "secp256k1"
+
+        # Lane-parallel (SIMD) batch signature verification
+        self.cpp_info.components["secp256k1_turbo"].libs = ["secp256k1-turbo"]
+        self.cpp_info.components["secp256k1_turbo"].names["cmake_find_package"] = "secp256k1-turbo"
+        self.cpp_info.components["secp256k1_turbo"].names["cmake_find_package_multi"] = "secp256k1-turbo"
+        self.cpp_info.components["secp256k1_turbo"].requires = ["secp256k1"]
+
+        # Core infrastructure component
+        self.cpp_info.components["infrastructure"].libs = ["infrastructure"]
+        self.cpp_info.components["infrastructure"].names["cmake_find_package"] = "infrastructure"
+        self.cpp_info.components["infrastructure"].names["cmake_find_package_multi"] = "infrastructure"
+        if self.settings.os == "Emscripten" and self.options.wasm_simd:
+            self.cpp_info.components["infrastructure"].exelinkflags.append("-msimd128")
+            self.cpp_info.components["infrastructure"].sharedlinkflags.append("-msimd128")
+        if self.options.browser_node:
+            # Built with WebAssembly exceptions: a consumer compiles and links
+            # the same way, or exceptions do not cross into its code.
+            infrastructure = self.cpp_info.components["infrastructure"]
+            infrastructure.cxxflags.append("-fwasm-exceptions")
+            infrastructure.exelinkflags.append("-fwasm-exceptions")
+            infrastructure.sharedlinkflags.append("-fwasm-exceptions")
+        infrastructure_defines = list(static_defines)
+        if self.options.browser_node:
+            # The same in every consumer translation unit: selections wait on the
+            # Worker runtime's timer (asio 1.38.3-kth.3).
+            infrastructure_defines.extend([
+                "KTH_BROWSER_NODE", "ASIO_DISABLE_THREADS",
+                'ASIO_CHANNEL_SELECT_TIMER_HEADER="kth/infrastructure/utility/browser_runtime.hpp"',
+                "ASIO_CHANNEL_SELECT_TIMER_TYPE=::kth::browser::timer",
+            ])
+        if self.options.with_png:
+            infrastructure_defines.append("KTH_WITH_PNG")
+        if self.options.with_qrencode:
+            infrastructure_defines.append("KTH_WITH_QRENCODE")
+        if self.options.with_jemalloc:
+            infrastructure_defines.append("KTH_WITH_JEMALLOC")
+        self.cpp_info.components["infrastructure"].defines = infrastructure_defines + sigverify_defines
+        # Infrastructure directly uses GMP for big_number, independently of consensus.
+        self.cpp_info.components["infrastructure"].requires = [
+            "secp256k1",
+            *(["secp256k1_turbo"] if sigverify_turbo else []),
+            "gmp::gmp",
+            "boost::boost",
+            "cli11::cli11",
+            "fmt::fmt",
+            "ctre::ctre",
+            "spdlog::spdlog"
+        ]
+        # Native Base64 acceleration; WebAssembly has its own optional SIMD128 kernel.
+        if self.settings.os != "Emscripten":
+            self.cpp_info.components["infrastructure"].requires.append("simdutf::simdutf")
+        # Add libpng and libqrencode when enabled
+        if self.options.with_png:
+            self.cpp_info.components["infrastructure"].requires.append("libpng::libpng")
+        if self.options.with_qrencode:
+            self.cpp_info.components["infrastructure"].requires.append("libqrencode::libqrencode")
+        # Add asio when using standalone mode
+        if self.options.asio_standalone:
+            self.cpp_info.components["infrastructure"].requires.append("asio::asio")
+        # Add jemalloc when enabled
+        if self.options.with_jemalloc:
+            self.cpp_info.components["infrastructure"].requires.append("jemalloc::jemalloc")
+
+
+        # Domain models and business logic
+        self.cpp_info.components["domain"].libs = ["domain"]
+        self.cpp_info.components["domain"].names["cmake_find_package"] = "domain"
+        self.cpp_info.components["domain"].names["cmake_find_package_multi"] = "domain"
+        self.cpp_info.components["domain"].defines = [currency_define] + static_defines + sigverify_defines
+        # Domain depends on infrastructure and tiny-aes-c for wallet encryption
+        self.cpp_info.components["domain"].requires = [
+            "infrastructure",
+            "tiny-aes-c::tiny-aes-c"
+        ]
+        
+        # Consensus rules and validation (if enabled)
+        if self.options.consensus:
+            self.cpp_info.components["consensus"].libs = ["consensus"]
+            self.cpp_info.components["consensus"].names["cmake_find_package"] = "consensus"
+            self.cpp_info.components["consensus"].names["cmake_find_package_multi"] = "consensus"
+            self.cpp_info.components["consensus"].defines = [currency_define] + static_defines + sigverify_defines
+            # Consensus has its own direct dependencies: boost, openssl, secp256k1 (internal component), gmp
+            self.cpp_info.components["consensus"].requires = [
+                "secp256k1",
+                *(["secp256k1_turbo"] if sigverify_turbo else []),
+                "boost::boost",
+                "openssl::openssl",
+                "gmp::gmp"
+            ]
+        
+        # Database layer
+        self.cpp_info.components["database"].libs = ["database"]
+        self.cpp_info.components["database"].names["cmake_find_package"] = "database"
+        self.cpp_info.components["database"].names["cmake_find_package_multi"] = "database"
+        self.cpp_info.components["database"].defines = [currency_define] + static_defines
+        # Database depends on domain, lmdb and utxoz (UTXO set storage)
+        self.cpp_info.components["database"].requires = ["domain", "lmdb::lmdb", "utxoz::utxoz"]
+        
+        # Blockchain management
+        self.cpp_info.components["blockchain"].libs = ["blockchain"]
+        self.cpp_info.components["blockchain"].names["cmake_find_package"] = "blockchain"
+        self.cpp_info.components["blockchain"].names["cmake_find_package_multi"] = "blockchain"
+        self.cpp_info.components["blockchain"].defines = [currency_define, mempool_backend_define] + static_defines + sigverify_defines
+        # Blockchain depends on database and optionally consensus
+        blockchain_requires = ["database"]
+        if self.options.consensus:
+            blockchain_requires.append("consensus")
+        self.cpp_info.components["blockchain"].requires = blockchain_requires
+        
+        # Network layer (in Emscripten builds, only for the browser transport)
+        if self.settings.os != "Emscripten" or self.options.browser_node:
+            self.cpp_info.components["network"].libs = ["network"]
+            self.cpp_info.components["network"].names["cmake_find_package"] = "network"
+            self.cpp_info.components["network"].names["cmake_find_package_multi"] = "network"
+            if self.options.browser_node:
+                # The browser stream is Emscripten's WebSocket API.
+                self.cpp_info.components["network"].exelinkflags.append("-lwebsocket.js")
+                self.cpp_info.components["network"].sharedlinkflags.append("-lwebsocket.js")
+            self.cpp_info.components["network"].defines = [currency_define] + static_defines
+            # Network depends on domain and simdjson (for peer_database JSON parsing)
+            self.cpp_info.components["network"].requires = ["domain", "simdjson::simdjson"]
+            if self.options.with_websocket:
+                self.cpp_info.components["network"].defines.append("KTH_WITH_WEBSOCKET")
+                self.cpp_info.components["network"].requires.append("wslay::wslay")
+        
+        # Node implementation
+        self.cpp_info.components["node"].libs = ["node"]
+        self.cpp_info.components["node"].names["cmake_find_package"] = "node"
+        self.cpp_info.components["node"].names["cmake_find_package_multi"] = "node"
+        self.cpp_info.components["node"].defines = [currency_define, mempool_backend_define] + rpc_defines + static_defines + sigverify_defines
+        # Node depends on blockchain and optionally network (if not Emscripten).
+        # ftxui is consumed by the node-exe TUI dashboard (executable, not a
+        # library component); listing it here keeps Conan 2's strict
+        # "every direct dependency must be used by some component" check
+        # happy. It's a no-op for library consumers.
+        node_requires = ["blockchain"]
+        if self.settings.os != "Emscripten" or self.options.browser_node:
+            # A browser node's header client runs on the network layer.
+            node_requires.append("network")
+        # FTXUI is only required natively (requirements()): a browser node has
+        # no dashboard, and no FTXUI to name.
+        if self.settings.os != "Emscripten":
+            node_requires.append("ftxui::ftxui")
+        if self.options.rpc == "jsonrpc" and self.settings.os != "Emscripten":
+            node_requires.append("llhttp::llhttp")
+        if self._with_grpc:
+            node_requires += ["grpc::grpc++_unsecure", "protobuf::libprotobuf", "asio-grpc::asio-grpc"]
+        if self.options.rpc == "capnproto":
+            node_requires.append("capnproto::capnp-rpc")
+        self.cpp_info.components["node"].requires = node_requires
+        
+        # Optional components
+        # Node executable (if built)
+        try:
+            node_exe_libs = [lib for lib in collect_libs(self) if "node-exe" in lib or "kth-node-exe" in lib]
+            if node_exe_libs:
+                self.cpp_info.components["node-exe"].libs = node_exe_libs
+                self.cpp_info.components["node-exe"].names["cmake_find_package"] = "node-exe"
+                self.cpp_info.components["node-exe"].names["cmake_find_package_multi"] = "node-exe"
+                self.cpp_info.components["node-exe"].defines = [currency_define, mempool_backend_define] + static_defines
+                self.cpp_info.components["node-exe"].requires = ["node"]
+        except:
+            # If collect_libs fails or node-exe is not built, skip it
+            pass
+        
+        # C API (if enabled)
+        # Note: BUILD_C_API option might not be accessible here, so we'll try to detect if the lib exists
+        try:
+            c_api_libs = [lib for lib in collect_libs(self) if "c-api" in lib or "kth-c-api" in lib]
+            if c_api_libs:
+                self.cpp_info.components["c-api"].libs = c_api_libs
+                self.cpp_info.components["c-api"].names["cmake_find_package"] = "c-api"
+                self.cpp_info.components["c-api"].names["cmake_find_package_multi"] = "c-api"
+                self.cpp_info.components["c-api"].defines = [currency_define, mempool_backend_define] + static_defines
+                self.cpp_info.components["c-api"].requires = ["node"]
+        except:
+            # If collect_libs fails or c-api is not built, skip it
+            pass
+        
+        # Main target that includes all core components (equivalent to the old behavior)
+        # This provides a convenient way to link against all of kth at once
+        main_requires = ["infrastructure", "domain", "database", "blockchain", "node", "secp256k1", "secp256k1_turbo"]
+        if self.options.consensus:
+            main_requires.append("consensus")
+        if self.settings.os != "Emscripten" or self.options.browser_node:
+            main_requires.append("network")
+        
+        self.cpp_info.components["kth"].requires = main_requires
+        self.cpp_info.components["kth"].names["cmake_find_package"] = "kth"
+        self.cpp_info.components["kth"].names["cmake_find_package_multi"] = "kth"
