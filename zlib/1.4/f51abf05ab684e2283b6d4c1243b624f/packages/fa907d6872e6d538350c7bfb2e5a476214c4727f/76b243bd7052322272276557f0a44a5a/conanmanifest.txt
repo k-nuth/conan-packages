@@ -1,0 +1,6 @@
+1795776683
+conaninfo.txt: 8ec85341550df8a4a70c13757f2d10cc
+include/zconf.h: dd5a66e0037841fe80dc637ffbcca0f5
+include/zlib.h: 529a3a0f493b952be01edc8a23c22fee
+lib/libz.a: d99a3090818fbbefb58861e699e6a4ad
+licenses/LICENSE: 66e4e749bb11d80fc7ba510a9ce99534

@@ -1,0 +1,9 @@
+[settings]
+arch=armv8
+build_type=Release
+compiler=apple-clang
+compiler.version=21
+os=Macos
+[options]
+fPIC=True
+shared=False
